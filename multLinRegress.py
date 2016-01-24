@@ -1,20 +1,23 @@
-# Simple function for doing multiple regression with TensorFlow.
-# Usage:
-#  python multLinRegress.py --train trainData.csv
-# where trainData.csv is a comma delimited text file. The first column is value 
-# of the output variable to be predicted. The remaining columns are the input 
-# predictor variables. Do NOT include a bias predictor. This is taken care of by 
-# the code.
-#
-# Example:
-#  python multLinRegress.py --train 2dLinRegExample.csv
-#
-# Code based on Jason Baldrige's softmax.py function:
-#  https://github.com/jasonbaldridge/try-tf
-#
-# David Groppe
-# Python newbie
-# Dec, 2015
+""" Simple function for doing multiple linear regression with TensorFlow.
+ Usage:
+  python multLinRegress.py --train trainData.csv
+  
+ where trainData.csv is a comma delimited text file. The first column is value 
+ of the output variable to be predicted. The remaining columns are the input 
+ predictor variables. Do NOT include a bias predictor. This is taken care of by 
+ the code.
+
+ Example:
+  python multLinRegress.py --train 2dLinRegExample.csv
+
+ Code based on Jason Baldrige's softmax.py function:
+  https://github.com/jasonbaldridge/try-tf
+
+ David Groppe
+ Python newbie
+ Dec, 2015
+ 
+"""
 
 import tensorflow.python.platform
 import tensorflow as tf
@@ -40,7 +43,7 @@ def extract_data(filename):
         outputs.append(float(row[0]))
         fvecs.append([float(x) for x in row[1:]])
     
-    # Convert the array of float arrays into a numpy float arrays.
+    # Convert the array of float arrays into numpy float arrays.
     fvecs_np = np.matrix(fvecs).astype(np.float32)
     outputs_np = np.array(outputs).astype(np.float32)
     
@@ -69,7 +72,7 @@ def main(argv=None):
     trainDataFname = FLAGS.train
     if trainDataFname==None:
         print "Need to provide training data as argument. For example: "
-        print "python multLinRegress.py --train 2dLinRegExample.txt"
+        print "python multLinRegress.py --train 2dLinRegExample.csv"
         exit()
         
     print "Training Data: "
@@ -101,13 +104,20 @@ def main(argv=None):
 
     y_model = tf.matmul(X,w) 
 
-    cost = tf.reduce_mean((tf.pow(Y-y_model, 2))) # use sqr error for cost function (mean is better than sum as it makes cost independent of batch size)
+    cost = tf.reduce_mean((tf.pow(Y-y_model, 2))) # use mean sqr error for cost function (mean is better than sum as it makes cost independent of batch size)
     # This how you can get an output of the cost function after each training iteration
     #cost = tf.Print(cost, [cost], "cost: ") 
 
     train_op = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
 
+    # chunk below added for TensorBoard
+    with tf.name_scope('test'):
+        mse = tf.reduce_mean((tf.pow(Y-y_model, 2)))
+        _ = tf.scalar_summary('MeanSqrError', mse)
+
     sess = tf.Session()
+    merged = tf.merge_all_summaries() # added for TensorBoard
+    writer = tf.train.SummaryWriter("/tmp/tflow_logs", sess.graph_def) # added for TensorBoard
     init = tf.initialize_all_variables()
     sess.run(init)
 
@@ -119,6 +129,11 @@ def main(argv=None):
     print "Training step: "
     for step in xrange(num_epochs * train_size // BATCH_SIZE):
         print step,
+        
+        # ?? pickup here to make Tensorboard work
+        #if i % 10 == 0:
+        #    
+        #else:
                 
         offset = (step * BATCH_SIZE) % train_size
         batch_input = trX[offset:(offset + BATCH_SIZE)]
