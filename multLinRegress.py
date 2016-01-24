@@ -155,6 +155,7 @@ def main(argv=None):
     print bias
     sess.close()
     
+    # Plot training error
     plt.figure()
     plt.plot(mse,'-o')
     plt.xlabel("Training Step",fontsize=14)
