@@ -22,6 +22,7 @@
 import tensorflow.python.platform
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Define the flags useable from the command line.
 tf.app.flags.DEFINE_string('train', None,
@@ -118,15 +119,22 @@ def main(argv=None):
     # Batch training (training on all the data at once or with batch sizes larger than 1 doesn't work)
     num_epochs=2 # number of times to run through the training data
     BATCH_SIZE=1 # number of observations to train on at each weight iteration
+    nSteps=num_epochs * train_size // BATCH_SIZE
+    mse=np.zeros(nSteps)
+    print " # of Training Steps:",
+    print nSteps
     print "** Beginning training **"
     print "Training step: "
-    for step in xrange(num_epochs * train_size // BATCH_SIZE):
+    for step in xrange(nSteps):
         print step,
      
         offset = (step * BATCH_SIZE) % train_size
         batch_input = trX[offset:(offset + BATCH_SIZE)]
         batch_output = trY[offset:(offset + BATCH_SIZE)]
         sess.run(train_op, feed_dict={X: batch_input, Y: batch_output})
+    
+        # Record training error
+        mse[step]=sess.run(cost, feed_dict={X: batch_input, Y: batch_output})
     
         if offset >= train_size-BATCH_SIZE:
             print
@@ -146,6 +154,13 @@ def main(argv=None):
     print "Bias: ",
     print bias
     sess.close()
+    
+    plt.figure()
+    plt.plot(mse,'-o')
+    plt.xlabel("Training Step",fontsize=14)
+    plt.ylabel("Batch Mean Squared Error",fontsize=14)
+    plt.title("multLinRegress.py training",fontsize=18)
+    plt.show()
     
 if __name__ == '__main__':
     tf.app.run()
