@@ -7,8 +7,11 @@
  predictor variables. Do NOT include a bias predictor. This is taken care of by 
  the code.
 
+This version of the code also visualizes the training error with Tensorboard.
+
  Example:
   python multLinRegress.py --train 2dLinRegExample.csv
+  tensorboard --logdir=/tmp/tflow_logs/
 
  Code based on Jason Baldrige's softmax.py function:
   https://github.com/jasonbaldridge/try-tf
@@ -16,6 +19,9 @@
  David Groppe
  Python newbie
  Dec, 2015
+ 
+ For more info on Tensorboard see:
+ https://www.tensorflow.org/versions/master/how_tos/summaries_and_tensorboard/index.html
  
 """
 
@@ -110,7 +116,14 @@ def main(argv=None):
 
     train_op = tf.train.GradientDescentOptimizer(0.01).minimize(cost)
 
+    # chunk below added for TensorBoard
+    with tf.name_scope('test'):
+        mse = tf.reduce_mean((tf.pow(Y-y_model, 2)))
+        _ = tf.scalar_summary('MeanSqrError', mse)
+
     sess = tf.Session()
+    merged = tf.merge_all_summaries() # added for TensorBoard
+    writer = tf.train.SummaryWriter("/tmp/tflow_logs", sess.graph_def) # added for TensorBoard
     init = tf.initialize_all_variables()
     sess.run(init)
 
@@ -122,11 +135,22 @@ def main(argv=None):
     print "Training step: "
     for step in xrange(num_epochs * train_size // BATCH_SIZE):
         print step,
-     
+        
         offset = (step * BATCH_SIZE) % train_size
         batch_input = trX[offset:(offset + BATCH_SIZE)]
         batch_output = trY[offset:(offset + BATCH_SIZE)]
-        sess.run(train_op, feed_dict={X: batch_input, Y: batch_output})
+        
+        # ?? pickup here to make Tensorboard work
+        if step % 3 == 0:
+            # Record performance for Tensorboard. I should really be doing this
+            # with a hold-out test set.
+            result = sess.run([merged, mse], feed_dict={X: batch_input, Y: batch_output})
+            summary_str = result[0]
+            acc = result[1]
+            writer.add_summary(summary_str, step)
+            print('MSE at step %s: %s' % (step, acc))      
+        else:
+            sess.run(train_op, feed_dict={X: batch_input, Y: batch_output})
     
         if offset >= train_size-BATCH_SIZE:
             print
